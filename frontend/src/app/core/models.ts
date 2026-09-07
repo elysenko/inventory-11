@@ -72,7 +72,8 @@ export interface SettingEntry {
 }
 
 export interface Paginated<T> {
-  rows: T[];
+  /** The current page. `total` is the size of the whole filtered set. */
+  data: T[];
   total: number;
   page: number;
   pageSize: number;

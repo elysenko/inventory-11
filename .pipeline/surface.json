@@ -1,22 +1,144 @@
 {
   "_generated": true,
   "_scaffolded_at": "2026-09-07T00:00:00Z",
-  "fileBudget": { "maxLines": 400, "hardLimit": 500 },
+  "fileBudget": {
+    "maxLines": 400,
+    "hardLimit": 500
+  },
   "routes": [
-    { "method": "GET", "path": "/health" },
-    { "method": "GET", "path": "/trpc/users.findAll" },
-    { "method": "GET", "path": "/trpc/users.findById" }
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "access": "public"
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/signup",
+      "access": "public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "access": "authenticated"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "access": "public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health/deep",
+      "access": "public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/docs",
+      "access": "public"
+    },
+    {
+      "method": "GET",
+      "path": "/api/items",
+      "access": "authenticated"
+    },
+    {
+      "method": "GET",
+      "path": "/api/items/:id",
+      "access": "authenticated"
+    },
+    {
+      "method": "GET",
+      "path": "/api/items/:id/movements",
+      "access": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/items",
+      "access": "MANAGER,ADMIN"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/items/:id",
+      "access": "MANAGER,ADMIN"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/items/:id",
+      "access": "MANAGER,ADMIN"
+    },
+    {
+      "method": "GET",
+      "path": "/api/locations",
+      "access": "authenticated"
+    },
+    {
+      "method": "GET",
+      "path": "/api/locations/:id",
+      "access": "authenticated"
+    },
+    {
+      "method": "POST",
+      "path": "/api/locations",
+      "access": "MANAGER,ADMIN"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/locations/:id",
+      "access": "MANAGER,ADMIN"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/locations/:id",
+      "access": "MANAGER,ADMIN"
+    },
+    {
+      "method": "POST",
+      "path": "/api/movements",
+      "access": "authenticated"
+    },
+    {
+      "method": "GET",
+      "path": "/api/movements",
+      "access": "MANAGER,ADMIN"
+    },
+    {
+      "method": "GET",
+      "path": "/api/movements/:id",
+      "access": "MANAGER,ADMIN"
+    },
+    {
+      "method": "GET",
+      "path": "/api/stock/balances",
+      "access": "authenticated"
+    },
+    {
+      "method": "GET",
+      "path": "/api/reports/low-stock",
+      "access": "MANAGER,ADMIN"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/settings",
+      "access": "ADMIN"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/admin/settings",
+      "access": "ADMIN"
+    }
   ],
   "components": [
-    { "selector": "app-root", "file": "frontend/src/app/app.component.ts", "maxLines": 400 },
-    { "selector": "app-home", "file": "frontend/src/app/home/home.component.ts", "maxLines": 400 }
+    {
+      "selector": "app-root",
+      "file": "frontend/src/app/app.component.ts",
+      "maxLines": 400
+    }
   ],
   "testIds": [
-    { "id": "app-ready", "element": "div", "component": "app-root" },
-    { "id": "home-main", "element": "main", "component": "app-home" },
-    { "id": "home-title", "element": "h1", "component": "app-home" },
-    { "id": "users-loading", "element": "p", "component": "app-home" },
-    { "id": "users-error", "element": "p", "component": "app-home" },
-    { "id": "users-list", "element": "ul", "component": "app-home" }
+    {
+      "id": "app-ready",
+      "element": "div",
+      "component": "app-root"
+    }
   ]
 }

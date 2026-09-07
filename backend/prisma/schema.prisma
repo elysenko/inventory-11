@@ -1,5 +1,10 @@
 generator client {
   provider = "prisma-client-js"
+  // Production pods are ARM64. The runtime image is alpine (musl), so
+  // linux-musl-arm64-openssl-3.0.x is the engine the app actually loads;
+  // linux-arm64-openssl-3.0.x covers a glibc base image (e.g. a migrate Job
+  // built from node:20-slim) without a schema change.
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {

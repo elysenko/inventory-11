@@ -1,13 +1,18 @@
 # Architecture
 
 ## Requested stack
-`enterprise` — Angular 19 (standalone components) + NestJS + tRPC + Prisma + PostgreSQL.
+`enterprise` — Angular 19 (standalone components) + NestJS + Prisma + PostgreSQL.
+
+The template ships a tRPC layer, but the approved StockRoom frontend talks plain
+REST over `/api`, so the backend exposes REST controllers and the unused
+`nestjs-trpc` wiring (and its dependency, which conflicts with NestJS 11) was
+removed rather than left dead in the tree.
 
 This project (StockRoom) was scaffolded from an empty repository (only `.git`, `.github/`, and a placeholder `README.md` existed). No platform was previously present, so the full `template-enterprise` template was copied in fresh.
 
 ## Platform layout
-- `frontend/` — Angular 19 standalone-component app (Angular CLI project name: `frontend`). Entry: `src/app/app.component.ts`, routes in `src/app/app.routes.ts`, tRPC client wiring in `src/app/app.config.ts` / `src/app/trpc-client.types.ts`. Template ships a demo `home/` component consuming `users.findAll` over tRPC.
-- `backend/` — NestJS app using `nestjs-trpc` for the tRPC layer alongside REST controllers. Entry: `src/main.ts` (global prefix, listens on `PORT` env, default 3000). Prisma schema/client under `backend/prisma/`. Health check at `backend/src/health/health.controller.ts` (`GET /health`, using `@nestjs/terminus`). Demo `users` module has both a REST-less tRPC router (`users.router.ts`) and a service.
+- `frontend/` — Angular 19 standalone-component app (Angular CLI project name: `frontend`). Entry: `src/app/app.component.ts`, routes in `src/app/app.routes.ts`, providers in `src/app/app.config.ts`. API response shapes are declared in `src/app/core/models.ts`, which the backend's view types match field for field. nginx proxies `/api/` to the backend; `proxy.conf.json` does the same for `ng serve`.
+- `backend/` — NestJS REST API. Entry: `src/main.ts` (global `api` prefix, listens on `PORT`, default 3001 to match `colossus.yaml` `backend.port`). Feature modules: `auth`, `items`, `locations`, `movements`, `reports`, `stock`, `settings`, `health`. Prisma schema/client under `backend/prisma/`. `JwtAuthGuard` and `RolesGuard` are registered as `APP_GUARD`s, so 401 is the default for every endpoint and routes opt out with `@Public()`. Health at `GET /api/health` (liveness) and `GET /api/health/deep` (database round-trip). Swagger at `GET /api/docs`, which is also the deploy probe path.
 - `docker-compose.yml` — local Postgres 16 + pgadmin for development.
 - `.pipeline/surface.json` — generated contract of routes, components, and `data-testid`s for the test_spec/Playwright agents. Regenerate whenever routes/components/testids change.
 - `.colossus-acceptance.json` — post-deploy render-gate contract (`ready_testid: app-ready`); `expect_text` must be filled in by the coder once the real StockRoom front page replaces the template's demo "Users" list.
