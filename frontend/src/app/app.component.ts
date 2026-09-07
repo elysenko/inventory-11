@@ -41,6 +41,13 @@ export class AppComponent {
   readonly drawerOpen = signal(false);
   readonly menuOpen = signal(false);
 
+  constructor() {
+    // The cached user is whatever /api/auth/login returned; re-reading /api/auth/me
+    // on boot means a role changed server-side takes effect on the next load
+    // rather than lingering until the token expires.
+    void this.auth.refresh();
+  }
+
   private readonly url = toSignal(
     this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd),

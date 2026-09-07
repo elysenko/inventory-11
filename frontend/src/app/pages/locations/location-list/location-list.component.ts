@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { LocationsApi } from '../../../core/api/locations-api.service';
+import { errorMessage } from '../../../core/api/api-error';
 import { Location } from '../../../core/models';
 import { mergeQueryParams, readNumber } from '../../../core/query-params';
 
@@ -16,15 +18,12 @@ const PAGE_SIZE = 5;
 export class LocationListComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly api = inject(LocationsApi);
 
-  readonly locations = signal<Location[]>([
-    { id: 'loc-a', name: 'Main', zone: 'Zone A', itemCount: 6, totalQty: 412 },
-    { id: 'loc-b', name: 'Main', zone: 'Zone B', itemCount: 5, totalQty: 268 },
-    { id: 'loc-c', name: 'Overflow', zone: 'Zone C', itemCount: 4, totalQty: 131 },
-    { id: 'loc-d', name: 'Goods in', zone: 'Dock 1', itemCount: 2, totalQty: 34 },
-    { id: 'loc-e', name: 'Quarantine', zone: 'Zone Q', itemCount: 0, totalQty: 0 },
-    { id: 'loc-f', name: 'Returns', zone: 'Dock 2', itemCount: 0, totalQty: 0 },
-  ]);
+  /** Every location, so the footer count covers the whole set, not one page. */
+  readonly locations = signal<Location[]>([]);
+  readonly loading = signal(true);
+  readonly loadError = signal<string | null>(null);
 
   private readonly params = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
@@ -45,6 +44,24 @@ export class LocationListComponent {
     () => this.locations().find((row) => row.id === this.deleteId()) ?? null,
   );
   readonly deleteError = signal<string | null>(null);
+  readonly deleting = signal(false);
+
+  constructor() {
+    void this.reload();
+  }
+
+  async reload(): Promise<void> {
+    this.loading.set(true);
+    this.loadError.set(null);
+    try {
+      this.locations.set(await this.api.listAll());
+    } catch (err) {
+      this.locations.set([]);
+      this.loadError.set(errorMessage(err));
+    } finally {
+      this.loading.set(false);
+    }
+  }
 
   goToPage(page: number): void {
     mergeQueryParams(this.router, { page: page <= 1 ? null : page });
@@ -60,16 +77,22 @@ export class LocationListComponent {
     mergeQueryParams(this.router, { modal: null, id: null });
   }
 
-  confirmDelete(location: Location): void {
-    // A location holding stock is rejected server-side with 409 — surface it, do not
-    // silently orphan the quantities.
-    if (location.totalQty > 0) {
-      this.deleteError.set(
-        `${location.name} · ${location.zone} still holds ${location.totalQty} units across ${location.itemCount} items. Transfer the stock out before deleting it.`,
-      );
-      return;
+  /**
+   * A location holding stock, or referenced by a movement, is refused with a
+   * 409. Surfacing that message is the point — deleting anyway would silently
+   * orphan the quantities.
+   */
+  async confirmDelete(location: Location): Promise<void> {
+    this.deleteError.set(null);
+    this.deleting.set(true);
+    try {
+      await this.api.remove(location.id);
+      this.closeDelete();
+      await this.reload();
+    } catch (err) {
+      this.deleteError.set(errorMessage(err));
+    } finally {
+      this.deleting.set(false);
     }
-    this.locations.update((rows) => rows.filter((row) => row.id !== location.id));
-    this.closeDelete();
   }
 }

@@ -1,12 +1,24 @@
 /**
  * Namespaced browser storage.
  *
- * Mockups are served many-per-origin under /<mockup_id>/ and storage is origin-scoped,
- * not path-scoped — an unprefixed `user` key would collide with every other mockup the
- * reviewer has open. Every read/write goes through here so keys are always prefixed with
- * the first path segment, e.g. `49c3b66f-...:user`.
+ * Two different namespaces, because the two environments need opposite things:
+ *
+ * - Preview: mockups are served many-per-origin under /<mockup_id>/ and storage is
+ *   origin-scoped, not path-scoped, so an unprefixed `user` key would collide with
+ *   every other mockup the reviewer has open. There the first path segment is the
+ *   mockup id — stable for the whole session — so it makes a good prefix.
+ *
+ * - Deployed: the app owns its origin and the first path segment is the *route*
+ *   (`/login`, `/items`, `/movements`). Prefixing by it would file the token written
+ *   at `/login` under `login:token` and then look for `items:token` on the next cold
+ *   load, silently signing the user out on every refresh and every deep link. A fixed
+ *   prefix is what keeps a session alive across navigations.
  */
-const NS = (typeof location !== 'undefined' && location.pathname.split('/')[1]) || 'app';
+const APP_NS = 'stockroom';
+
+const NS = COLOSSUS_PREVIEW
+  ? (typeof location !== 'undefined' && location.pathname.split('/')[1]) || APP_NS
+  : APP_NS;
 
 export const nsKey = (key: string): string => `${NS}:${key}`;
 

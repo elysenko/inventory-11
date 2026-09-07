@@ -2,6 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } 
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { ItemsApi } from '../../../core/api/items-api.service';
+import { LocationsApi } from '../../../core/api/locations-api.service';
+import { MovementsApi, MovementPayload } from '../../../core/api/movements-api.service';
+import { BalanceMap, StockApi } from '../../../core/api/stock-api.service';
+import { errorMessage } from '../../../core/api/api-error';
 import { Item, Location, MovementType } from '../../../core/models';
 import { readOneOf, readText } from '../../../core/query-params';
 
@@ -17,32 +22,26 @@ const TYPES = ['IN', 'OUT', 'TRANSFER'] as const;
 export class MovementFormComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly itemsApi = inject(ItemsApi);
+  private readonly locationsApi = inject(LocationsApi);
+  private readonly movementsApi = inject(MovementsApi);
+  private readonly stockApi = inject(StockApi);
 
   readonly typeOptions = TYPES;
 
-  readonly items = signal<Item[]>([
-    { id: 'itm-001', sku: 'SKU-001', name: 'Galvanised shelf bracket', description: null, unit: 'ea', reorderAt: 40, totalQty: 128 },
-    { id: 'itm-002', sku: 'SKU-002', name: 'M8 hex bolt, 100 pack', description: null, unit: 'box', reorderAt: 25, totalQty: 18 },
-    { id: 'itm-003', sku: 'SKU-003', name: 'Stretch wrap film 500mm', description: null, unit: 'roll', reorderAt: 30, totalQty: 96 },
-    { id: 'itm-005', sku: 'SKU-005', name: 'Thermal label 4×6, 1000 pack', description: null, unit: 'box', reorderAt: 20, totalQty: 20 },
-    { id: 'itm-008', sku: 'SKU-008', name: 'Forklift hydraulic oil 20L', description: null, unit: 'drum', reorderAt: 8, totalQty: 3 },
-  ]);
+  readonly items = signal<Item[]>([]);
+  readonly locations = signal<Location[]>([]);
 
-  readonly locations = signal<Location[]>([
-    { id: 'loc-a', name: 'Main', zone: 'Zone A', itemCount: 6, totalQty: 412 },
-    { id: 'loc-b', name: 'Main', zone: 'Zone B', itemCount: 5, totalQty: 268 },
-    { id: 'loc-c', name: 'Overflow', zone: 'Zone C', itemCount: 4, totalQty: 131 },
-    { id: 'loc-d', name: 'Goods in', zone: 'Dock 1', itemCount: 2, totalQty: 34 },
-  ]);
+  /**
+   * On-hand per (item, location), used only for the "N units held there" hint
+   * and the pre-submit warning. Advisory: the authoritative check runs under a
+   * row lock inside the server's movement transaction, so a stale value here
+   * can never let an overdraw through.
+   */
+  readonly balances = signal<BalanceMap>({});
 
-  /** On-hand per (item, location) — drives the local insufficient-stock preview. */
-  readonly balances = signal<Record<string, number>>({
-    'itm-001|loc-a': 64, 'itm-001|loc-b': 40, 'itm-001|loc-c': 24,
-    'itm-002|loc-a': 12, 'itm-002|loc-b': 6, 'itm-002|loc-c': 0,
-    'itm-003|loc-a': 48, 'itm-003|loc-b': 48,
-    'itm-005|loc-a': 20,
-    'itm-008|loc-a': 3,
-  });
+  readonly loading = signal(true);
+  readonly submitting = signal(false);
 
   private readonly params = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
@@ -57,6 +56,8 @@ export class MovementFormComponent {
   readonly formError = signal<string | null>(null);
 
   constructor() {
+    void this.load();
+
     // Prefill from ?itemId=&type= so low-stock and item pages can deep-link a restock.
     effect(() => {
       const map = this.params();
@@ -64,6 +65,25 @@ export class MovementFormComponent {
       const prefilled = readText(map.get('itemId'));
       this.itemId.set(prefilled || (this.items()[0]?.id ?? ''));
     });
+  }
+
+  async load(): Promise<void> {
+    this.loading.set(true);
+    this.formError.set(null);
+    try {
+      const [items, locations, balances] = await Promise.all([
+        this.itemsApi.listAll(),
+        this.locationsApi.listAll(),
+        this.stockApi.balances(),
+      ]);
+      this.items.set(items);
+      this.locations.set(locations);
+      this.balances.set(balances);
+    } catch (err) {
+      this.formError.set(errorMessage(err));
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   readonly selectedItem = computed(() => this.items().find((item) => item.id === this.itemId()) ?? null);
@@ -86,7 +106,7 @@ export class MovementFormComponent {
     if (!this.needsTo()) this.toLocId.set('');
   }
 
-  submit(): void {
+  async submit(): Promise<void> {
     this.formError.set(null);
 
     if (!this.itemId()) {
@@ -110,16 +130,39 @@ export class MovementFormComponent {
       return;
     }
 
-    // The API rejects an overdraw with 422 "Insufficient stock" and rolls the whole
-    // transaction back — nothing is written, so the stored balance is untouched.
-    const available = this.sourceBalance();
-    if (available !== null && this.qty() > available) {
-      this.formError.set(
-        `Insufficient stock — only ${available} ${this.selectedItem()?.unit ?? 'units'} of ${this.selectedItem()?.sku} are held at that location. Nothing was recorded.`,
-      );
-      return;
-    }
+    // The unused side is omitted rather than sent blank: an IN carrying a
+    // fromLocId is a shape error, not an empty field.
+    const payload: MovementPayload = {
+      type: this.type(),
+      itemId: this.itemId(),
+      qty: this.qty(),
+      ...(this.needsFrom() ? { fromLocId: this.fromLocId() } : {}),
+      ...(this.needsTo() ? { toLocId: this.toLocId() } : {}),
+      ...(this.note().trim() ? { note: this.note().trim() } : {}),
+    };
 
-    void this.router.navigate(['/items', this.itemId()], { queryParams: { tab: 'history' } });
+    this.submitting.set(true);
+    try {
+      const movement = await this.movementsApi.create(payload);
+      void this.router.navigate(['/items', movement.itemId], { queryParams: { tab: 'history' } });
+    } catch (err) {
+      // An overdraw comes back as 422 "Insufficient stock". The whole
+      // transaction rolled back, so nothing was written and the stored balance
+      // is untouched — the server's message says so and is shown verbatim.
+      this.formError.set(errorMessage(err));
+      // The rejection may mean the local hint was stale; re-read it so the next
+      // attempt is judged against the real balance.
+      void this.refreshBalances();
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  private async refreshBalances(): Promise<void> {
+    try {
+      this.balances.set(await this.stockApi.balances());
+    } catch {
+      /* the hint is advisory — leaving it stale must not mask the real error */
+    }
   }
 }

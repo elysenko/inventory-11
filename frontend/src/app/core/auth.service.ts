@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { AuthUser, ROLE_RANK, Role } from './models';
+import { errorMessage } from './api/api-error';
 import { readJson, removeKeys, readRaw, writeJson, writeRaw } from './storage';
 
 const USER_KEY = 'user';
@@ -72,10 +73,19 @@ export class AuthService {
       );
       return;
     }
-    const res = await firstValueFrom(
-      this.http.post<LoginResponse>('/api/auth/login', { email, password }),
-    );
-    this.setSession(res.user, res.accessToken);
+    // HttpErrorResponse is not an Error, so the caller's `instanceof Error`
+    // check would discard the server's message. Rethrow it as one.
+    try {
+      const res = await firstValueFrom(
+        this.http.post<LoginResponse>('/api/auth/login', {
+          email: email.trim(),
+          password,
+        }),
+      );
+      this.setSession(res.user, res.accessToken);
+    } catch (err) {
+      throw new Error(errorMessage(err));
+    }
   }
 
   async signup(name: string, email: string, password: string): Promise<void> {
@@ -89,10 +99,18 @@ export class AuthService {
       );
       return;
     }
-    const res = await firstValueFrom(
-      this.http.post<LoginResponse>('/api/auth/signup', { name, email, password }),
-    );
-    this.setSession(res.user, res.accessToken);
+    try {
+      const res = await firstValueFrom(
+        this.http.post<LoginResponse>('/api/auth/signup', {
+          name: name.trim(),
+          email: email.trim(),
+          password,
+        }),
+      );
+      this.setSession(res.user, res.accessToken);
+    } catch (err) {
+      throw new Error(errorMessage(err));
+    }
   }
 
   /**
@@ -114,9 +132,38 @@ export class AuthService {
     this.setSession({ ...(user ?? { id: 'usr-preview', email: 'dana.whitfield@stockroom.example', name: 'Dana Whitfield' }), role }, 'preview-session');
   }
 
+  /**
+   * Re-reads the principal behind the stored token.
+   *
+   * The cached user is whatever the server said at login, so a role changed
+   * since then would leave the nav and the guards stale. A failure is swallowed
+   * deliberately: an expired token is already handled by the interceptor's 401
+   * branch, and a backend blip must not sign a working session out.
+   */
+  async refresh(): Promise<void> {
+    if (COLOSSUS_PREVIEW || !this.token()) return;
+    try {
+      const user = await firstValueFrom(this.http.get<AuthUser>('/api/auth/me'));
+      if (isAuthUser(user)) {
+        this.currentUser.set(user);
+        writeJson(USER_KEY, user);
+      }
+    } catch {
+      /* interceptor owns the 401 case; anything else leaves the session as-is */
+    }
+  }
+
   logout(): void {
+    const hadToken = this.token() !== null;
     this.currentUser.set(null);
     removeKeys(USER_KEY, TOKEN_KEY);
+
+    // Best effort and deliberately not awaited: the JWT is stateless, so the
+    // local clear above is what actually ends the session. Errors are ignored —
+    // signing out must never fail.
+    if (hadToken && !COLOSSUS_PREVIEW) {
+      this.http.post('/api/auth/logout', {}).subscribe({ next: () => {}, error: () => {} });
+    }
   }
 
   private hasRank(minimum: Role): boolean {

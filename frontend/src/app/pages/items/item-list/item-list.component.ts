@@ -1,8 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { map } from 'rxjs';
 import { AuthService } from '../../../core/auth.service';
+import { ItemsApi } from '../../../core/api/items-api.service';
+import { errorMessage } from '../../../core/api/api-error';
 import { Item } from '../../../core/models';
 import { mergeQueryParams, readBoolean, readNumber, readText } from '../../../core/query-params';
 
@@ -19,20 +20,21 @@ export class ItemListComponent {
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly api = inject(ItemsApi);
 
   readonly pageSize = PAGE_SIZE;
 
-  /** Backend-supplied data. service_agent swaps this initializer for an API call. */
-  readonly items = signal<Item[]>([
-    { id: 'itm-001', sku: 'SKU-001', name: 'Galvanised shelf bracket', description: 'Heavy duty, 400mm arm', unit: 'ea', reorderAt: 40, totalQty: 128 },
-    { id: 'itm-002', sku: 'SKU-002', name: 'M8 hex bolt, 100 pack', description: 'Zinc plated, DIN 933', unit: 'box', reorderAt: 25, totalQty: 18 },
-    { id: 'itm-003', sku: 'SKU-003', name: 'Stretch wrap film 500mm', description: '23 micron, clear', unit: 'roll', reorderAt: 30, totalQty: 96 },
-    { id: 'itm-004', sku: 'SKU-004', name: 'Euro pallet 1200×800', description: 'EPAL certified, grade B', unit: 'ea', reorderAt: 50, totalQty: 212 },
-    { id: 'itm-005', sku: 'SKU-005', name: 'Thermal label 4×6, 1000 pack', description: 'Direct thermal, perforated', unit: 'box', reorderAt: 20, totalQty: 20 },
-    { id: 'itm-006', sku: 'SKU-006', name: 'Nitrile glove, large, 100 pack', description: 'Powder free, blue', unit: 'box', reorderAt: 35, totalQty: 74 },
-    { id: 'itm-007', sku: 'SKU-007', name: 'Corrugated carton 400mm', description: 'Double wall, brown', unit: 'ea', reorderAt: 150, totalQty: 640 },
-    { id: 'itm-008', sku: 'SKU-008', name: 'Forklift hydraulic oil 20L', description: 'ISO VG 46', unit: 'drum', reorderAt: 8, totalQty: 3 },
-  ]);
+  /**
+   * The whole catalogue, loaded once.
+   *
+   * The header counts every tracked item and every low-stock item regardless of
+   * the active filter, so this deliberately holds the unfiltered set and the
+   * search / low-stock filters are applied below. That also keeps paging
+   * instant, which matters because the filters round-trip through the URL.
+   */
+  readonly items = signal<Item[]>([]);
+  readonly loading = signal(true);
+  readonly loadError = signal<string | null>(null);
 
   private readonly params = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
@@ -78,6 +80,24 @@ export class ItemListComponent {
 
   /** Set when the API rejects a delete with 409 (the item is referenced by movements). */
   readonly deleteError = signal<string | null>(null);
+  readonly deleting = signal(false);
+
+  constructor() {
+    void this.reload();
+  }
+
+  async reload(): Promise<void> {
+    this.loading.set(true);
+    this.loadError.set(null);
+    try {
+      this.items.set(await this.api.listAll());
+    } catch (err) {
+      this.items.set([]);
+      this.loadError.set(errorMessage(err));
+    } finally {
+      this.loading.set(false);
+    }
+  }
 
   isLow(item: Item): boolean {
     return item.totalQty <= item.reorderAt;
@@ -109,16 +129,22 @@ export class ItemListComponent {
     mergeQueryParams(this.router, { modal: null, id: null });
   }
 
-  confirmDelete(item: Item): void {
-    // Items referenced by a movement are blocked server-side with a 409; the UI must
-    // surface that rather than assume the delete succeeded.
-    if (item.totalQty > 0) {
-      this.deleteError.set(
-        `${item.sku} has recorded movements and ${item.totalQty} ${item.unit} still on hand. Move the stock out before deleting it.`,
-      );
-      return;
+  /**
+   * The server refuses an item with recorded movements or stock on hand with a
+   * 409. That message is the authoritative one, so it is shown verbatim and the
+   * modal stays open — the row is only dropped once the delete really happened.
+   */
+  async confirmDelete(item: Item): Promise<void> {
+    this.deleteError.set(null);
+    this.deleting.set(true);
+    try {
+      await this.api.remove(item.id);
+      this.closeDelete();
+      await this.reload();
+    } catch (err) {
+      this.deleteError.set(errorMessage(err));
+    } finally {
+      this.deleting.set(false);
     }
-    this.items.update((items) => items.filter((row) => row.id !== item.id));
-    this.closeDelete();
   }
 }

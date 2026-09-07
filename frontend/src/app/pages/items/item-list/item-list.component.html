@@ -39,7 +39,20 @@
   </div>
 
   <section class="card">
-    @if (rows().length === 0) {
+    @if (loading()) {
+      <div class="empty">
+        <span class="empty__icon" aria-hidden="true">▣</span>
+        <p class="empty__title">Loading items…</p>
+        <p>Fetching the catalogue and on-hand balances.</p>
+      </div>
+    } @else if (loadError()) {
+      <div class="empty">
+        <span class="empty__icon" aria-hidden="true">⚠</span>
+        <p class="empty__title">Could not load items</p>
+        <p class="alert alert-danger" role="alert">{{ loadError() }}</p>
+        <button type="button" class="btn" (click)="reload()">Try again</button>
+      </div>
+    } @else if (rows().length === 0) {
       <div class="empty">
         <span class="empty__icon" aria-hidden="true">▣</span>
         <p class="empty__title">No items match these filters</p>
@@ -130,7 +143,9 @@
         </div>
         <div class="modal__actions">
           <button type="button" class="btn" (click)="closeDelete()">Cancel</button>
-          <button type="button" class="btn btn-danger" (click)="confirmDelete(target)">Delete item</button>
+          <button type="button" class="btn btn-danger" [disabled]="deleting()" (click)="confirmDelete(target)">
+            {{ deleting() ? 'Deleting…' : 'Delete item' }}
+          </button>
         </div>
       </div>
     </div>

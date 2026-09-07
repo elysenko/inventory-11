@@ -13,6 +13,13 @@
 
   <section class="card">
     <form class="card-body form" (ngSubmit)="save()" novalidate>
+      @if (formError(); as message) {
+        <p class="alert alert-danger" role="alert">{{ message }}</p>
+      }
+      @if (loading()) {
+        <p class="alert alert-info" role="status">Loading this location…</p>
+      }
+
       <div class="form-grid">
         <div class="field">
           <label class="label" for="loc-name">Location name <span class="req">*</span></label>
@@ -50,8 +57,8 @@
       </div>
 
       <div class="form-actions">
-        <button type="submit" class="btn btn-primary">
-          {{ editing() ? 'Save changes' : 'Create location' }}
+        <button type="submit" class="btn btn-primary" [disabled]="saving() || loading()">
+          {{ saving() ? 'Saving…' : editing() ? 'Save changes' : 'Create location' }}
         </button>
         <a class="btn" routerLink="/locations">Cancel</a>
       </div>

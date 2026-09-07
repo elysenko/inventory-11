@@ -18,6 +18,9 @@
       @if (formError(); as message) {
         <p class="alert alert-danger" role="alert">{{ message }}</p>
       }
+      @if (loading()) {
+        <p class="alert alert-info" role="status">Loading this item…</p>
+      }
 
       <div class="form-grid">
         <div class="field">
@@ -87,10 +90,14 @@
       </div>
 
       <div class="form-actions">
-        <button type="submit" class="btn btn-primary">{{ editing() ? 'Save changes' : 'Create item' }}</button>
+        <button type="submit" class="btn btn-primary" [disabled]="saving() || loading()">
+          {{ saving() ? 'Saving…' : editing() ? 'Save changes' : 'Create item' }}
+        </button>
         <a class="btn" routerLink="/items">Cancel</a>
         @if (editing()) {
-          <button type="button" class="btn btn-danger row-end" (click)="askDelete()">Delete item</button>
+          <button type="button" class="btn btn-danger row-end" [disabled]="saving()" (click)="askDelete()">
+            Delete item
+          </button>
         }
       </div>
     </form>
@@ -108,7 +115,9 @@
         </div>
         <div class="modal__actions">
           <button type="button" class="btn" (click)="closeDelete()">Cancel</button>
-          <button type="button" class="btn btn-danger" (click)="confirmDelete()">Delete item</button>
+          <button type="button" class="btn btn-danger" [disabled]="deleting()" (click)="confirmDelete()">
+            {{ deleting() ? 'Deleting…' : 'Delete item' }}
+          </button>
         </div>
       </div>
     </div>

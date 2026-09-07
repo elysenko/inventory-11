@@ -1,148 +1,168 @@
 <div class="page">
-  <p class="breadcrumb"><a routerLink="/items">Items</a> <span aria-hidden="true">/</span> {{ item().sku }}</p>
-
-  <div class="page-head">
-    <div class="page-head__text">
-      <h1 class="page-title">
-        {{ item().name }}
-        @if (isLow()) {
-          <span class="badge badge-low">Low stock</span>
-        } @else {
-          <span class="badge badge-ok">In stock</span>
-        }
-      </h1>
-      <p class="page-sub">
-        <span class="mono">{{ item().sku }}</span> · {{ item().description }} · counted in
-        {{ item().unit }}
-      </p>
-    </div>
-    <div class="page-actions">
-      @if (auth.isManager()) {
-        <a class="btn" [routerLink]="['/items', item().id, 'edit']">Edit item</a>
-      }
-      <a
-        class="btn btn-primary"
-        routerLink="/movements/new"
-        [queryParams]="{ itemId: item().id }"
-      >Record movement</a>
-    </div>
-  </div>
-
-  <div class="stat-grid">
-    <div class="stat">
-      <p class="stat__label">On hand</p>
-      <p class="stat__value">{{ onHand() }}</p>
-      <p class="stat__hint">{{ item().unit }} across all zones</p>
-    </div>
-    <div class="stat">
-      <p class="stat__label">Reorder at</p>
-      <p class="stat__value">{{ item().reorderAt }}</p>
-      <p class="stat__hint">
-        @if (isLow()) { {{ deficit() }} below threshold } @else { Comfortably above threshold }
-      </p>
-    </div>
-    <div class="stat">
-      <p class="stat__label">Zones holding stock</p>
-      <p class="stat__value">{{ usedLocations() }}</p>
-      <p class="stat__hint">of {{ item().stockLevels.length }} stocked locations</p>
-    </div>
-  </div>
-
-  <nav class="tabs" aria-label="Item detail sections">
-    <a class="tab" [class.is-active]="tab() === 'stock'" [queryParams]="{ tab: 'stock' }" [routerLink]="[]">
-      Stock by location
-    </a>
-    <a class="tab" [class.is-active]="tab() === 'history'" [queryParams]="{ tab: 'history' }" [routerLink]="[]">
-      Movement history
-    </a>
-  </nav>
-
-  @if (tab() === 'stock') {
+  @if (loading()) {
     <section class="card">
-      <div class="table-wrap">
-        <table class="table table--stack">
-          <thead>
-            <tr>
-              <th scope="col">Location</th>
-              <th scope="col">Zone</th>
-              <th scope="col" class="num">Quantity</th>
-              <th scope="col"><span class="sr-only">Actions</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (level of item().stockLevels; track level.locationId) {
-              <tr>
-                <td data-label="Location" class="cell-primary">{{ level.locationName }}</td>
-                <td data-label="Zone">{{ level.zone }}</td>
-                <td data-label="Quantity" class="num">
-                  {{ level.qty }}
-                  @if (level.qty === 0) {
-                    <span class="badge badge-neutral">Empty</span>
-                  }
-                </td>
-                <td data-label="">
-                  <div class="actions">
-                    <a
-                      class="btn btn-sm"
-                      routerLink="/movements/new"
-                      [queryParams]="{ itemId: item().id, type: 'TRANSFER' }"
-                    >Transfer</a>
-                  </div>
-                </td>
-              </tr>
-            }
-          </tbody>
-          <tfoot>
-            <tr>
-              <td data-label="Total" colspan="2">Total on hand</td>
-              <td data-label="" class="num">{{ onHand() }} {{ item().unit }}</td>
-              <td data-label=""></td>
-            </tr>
-          </tfoot>
-        </table>
+      <div class="empty">
+        <span class="empty__icon" aria-hidden="true">▣</span>
+        <p class="empty__title">Loading item…</p>
+        <p>Fetching stock by location and the movement history.</p>
+      </div>
+    </section>
+  } @else if (loadError()) {
+    <p class="breadcrumb"><a routerLink="/items">Items</a></p>
+    <section class="card">
+      <div class="empty">
+        <span class="empty__icon" aria-hidden="true">⚠</span>
+        <p class="empty__title">Could not load this item</p>
+        <p class="alert alert-danger" role="alert">{{ loadError() }}</p>
+        <button type="button" class="btn" (click)="reload()">Try again</button>
       </div>
     </section>
   } @else {
-    <section class="card">
-      @if (movements().length === 0) {
-        <div class="empty">
-          <span class="empty__icon" aria-hidden="true">≡</span>
-          <p class="empty__title">No movements recorded yet</p>
-          <p>Every stock change for this item will appear here.</p>
-          <a class="btn btn-primary" routerLink="/movements/new" [queryParams]="{ itemId: item().id }">
-            Record the first movement
-          </a>
-        </div>
-      } @else {
+    <p class="breadcrumb"><a routerLink="/items">Items</a> <span aria-hidden="true">/</span> {{ item().sku }}</p>
+
+    <div class="page-head">
+      <div class="page-head__text">
+        <h1 class="page-title">
+          {{ item().name }}
+          @if (isLow()) {
+            <span class="badge badge-low">Low stock</span>
+          } @else {
+            <span class="badge badge-ok">In stock</span>
+          }
+        </h1>
+        <p class="page-sub">
+          <span class="mono">{{ item().sku }}</span> · {{ item().description }} · counted in
+          {{ item().unit }}
+        </p>
+      </div>
+      <div class="page-actions">
+        @if (auth.isManager()) {
+          <a class="btn" [routerLink]="['/items', item().id, 'edit']">Edit item</a>
+        }
+        <a
+          class="btn btn-primary"
+          routerLink="/movements/new"
+          [queryParams]="{ itemId: item().id }"
+        >Record movement</a>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat">
+        <p class="stat__label">On hand</p>
+        <p class="stat__value">{{ onHand() }}</p>
+        <p class="stat__hint">{{ item().unit }} across all zones</p>
+      </div>
+      <div class="stat">
+        <p class="stat__label">Reorder at</p>
+        <p class="stat__value">{{ item().reorderAt }}</p>
+        <p class="stat__hint">
+          @if (isLow()) { {{ deficit() }} below threshold } @else { Comfortably above threshold }
+        </p>
+      </div>
+      <div class="stat">
+        <p class="stat__label">Zones holding stock</p>
+        <p class="stat__value">{{ usedLocations() }}</p>
+        <p class="stat__hint">of {{ item().stockLevels.length }} stocked locations</p>
+      </div>
+    </div>
+
+    <nav class="tabs" aria-label="Item detail sections">
+      <a class="tab" [class.is-active]="tab() === 'stock'" [queryParams]="{ tab: 'stock' }" [routerLink]="[]">
+        Stock by location
+      </a>
+      <a class="tab" [class.is-active]="tab() === 'history'" [queryParams]="{ tab: 'history' }" [routerLink]="[]">
+        Movement history
+      </a>
+    </nav>
+
+    @if (tab() === 'stock') {
+      <section class="card">
         <div class="table-wrap">
           <table class="table table--stack">
             <thead>
               <tr>
-                <th scope="col">When</th>
-                <th scope="col">Type</th>
-                <th scope="col" class="num">Qty</th>
-                <th scope="col">From → To</th>
-                <th scope="col">By</th>
-                <th scope="col">Note</th>
+                <th scope="col">Location</th>
+                <th scope="col">Zone</th>
+                <th scope="col" class="num">Quantity</th>
+                <th scope="col"><span class="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody>
-              @for (movement of movements(); track movement.id) {
+              @for (level of item().stockLevels; track level.locationId) {
                 <tr>
-                  <td data-label="When" class="nowrap">{{ formatDateTime(movement.createdAt) }}</td>
-                  <td data-label="Type"><span class="badge badge-{{ movement.type }}">{{ movement.type }}</span></td>
-                  <td data-label="Qty" class="num">{{ movement.qty }}</td>
-                  <td data-label="From → To">{{ movement.fromLocName ?? '—' }} → {{ movement.toLocName ?? '—' }}</td>
-                  <td data-label="By" class="small">{{ movement.userEmail }}</td>
-                  <td data-label="Note" class="small muted">{{ movement.note }}</td>
+                  <td data-label="Location" class="cell-primary">{{ level.locationName }}</td>
+                  <td data-label="Zone">{{ level.zone }}</td>
+                  <td data-label="Quantity" class="num">
+                    {{ level.qty }}
+                    @if (level.qty === 0) {
+                      <span class="badge badge-neutral">Empty</span>
+                    }
+                  </td>
+                  <td data-label="">
+                    <div class="actions">
+                      <a
+                        class="btn btn-sm"
+                        routerLink="/movements/new"
+                        [queryParams]="{ itemId: item().id, type: 'TRANSFER' }"
+                      >Transfer</a>
+                    </div>
+                  </td>
                 </tr>
               }
             </tbody>
+            <tfoot>
+              <tr>
+                <td data-label="Total" colspan="2">Total on hand</td>
+                <td data-label="" class="num">{{ onHand() }} {{ item().unit }}</td>
+                <td data-label=""></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
-      }
-    </section>
-  }
+      </section>
+    } @else {
+      <section class="card">
+        @if (movements().length === 0) {
+          <div class="empty">
+            <span class="empty__icon" aria-hidden="true">≡</span>
+            <p class="empty__title">No movements recorded yet</p>
+            <p>Every stock change for this item will appear here.</p>
+            <a class="btn btn-primary" routerLink="/movements/new" [queryParams]="{ itemId: item().id }">
+              Record the first movement
+            </a>
+          </div>
+        } @else {
+          <div class="table-wrap">
+            <table class="table table--stack">
+              <thead>
+                <tr>
+                  <th scope="col">When</th>
+                  <th scope="col">Type</th>
+                  <th scope="col" class="num">Qty</th>
+                  <th scope="col">From → To</th>
+                  <th scope="col">By</th>
+                  <th scope="col">Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (movement of movements(); track movement.id) {
+                  <tr>
+                    <td data-label="When" class="nowrap">{{ formatDateTime(movement.createdAt) }}</td>
+                    <td data-label="Type"><span class="badge badge-{{ movement.type }}">{{ movement.type }}</span></td>
+                    <td data-label="Qty" class="num">{{ movement.qty }}</td>
+                    <td data-label="From → To">{{ movement.fromLocName ?? '—' }} → {{ movement.toLocName ?? '—' }}</td>
+                    <td data-label="By" class="small">{{ movement.userEmail }}</td>
+                    <td data-label="Note" class="small muted">{{ movement.note }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    }
 
-  <a routerLink="/movements/new" [queryParams]="{ itemId: item().id }" class="fab">＋ Record movement</a>
+    <a routerLink="/movements/new" [queryParams]="{ itemId: item().id }" class="fab">＋ Record movement</a>
+  }
 </div>

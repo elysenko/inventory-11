@@ -1,12 +1,30 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../core/auth.service';
+import { ItemsApi } from '../../../core/api/items-api.service';
+import { errorMessage } from '../../../core/api/api-error';
 import { ItemDetail, Movement } from '../../../core/models';
 import { formatDateTime, readOneOf } from '../../../core/query-params';
 
 const TABS = ['stock', 'history'] as const;
 type Tab = (typeof TABS)[number];
+
+/**
+ * Stand-in while the request is in flight. The template's loading branch means
+ * this is never rendered — it exists so the many `item().x` bindings stay
+ * non-null without threading an optional through every one of them.
+ */
+const BLANK: ItemDetail = {
+  id: '',
+  sku: '',
+  name: '',
+  description: null,
+  unit: '',
+  reorderAt: 0,
+  totalQty: 0,
+  stockLevels: [],
+};
 
 @Component({
   selector: 'app-item-detail',
@@ -18,44 +36,23 @@ type Tab = (typeof TABS)[number];
 export class ItemDetailComponent {
   readonly auth = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
+  private readonly api = inject(ItemsApi);
 
   /** Bound from the :id route param by withComponentInputBinding(). */
   readonly id = input<string>('');
 
   readonly formatDateTime = formatDateTime;
 
-  readonly details = signal<ItemDetail[]>([
-    {
-      id: 'itm-001', sku: 'SKU-001', name: 'Galvanised shelf bracket', description: 'Heavy duty, 400mm arm', unit: 'ea', reorderAt: 40, totalQty: 128,
-      stockLevels: [
-        { locationId: 'loc-a', locationName: 'Main', zone: 'Zone A', qty: 64 },
-        { locationId: 'loc-b', locationName: 'Main', zone: 'Zone B', qty: 40 },
-        { locationId: 'loc-c', locationName: 'Overflow', zone: 'Zone C', qty: 24 },
-      ],
-    },
-    {
-      id: 'itm-002', sku: 'SKU-002', name: 'M8 hex bolt, 100 pack', description: 'Zinc plated, DIN 933', unit: 'box', reorderAt: 25, totalQty: 18,
-      stockLevels: [
-        { locationId: 'loc-a', locationName: 'Main', zone: 'Zone A', qty: 12 },
-        { locationId: 'loc-b', locationName: 'Main', zone: 'Zone B', qty: 6 },
-        { locationId: 'loc-c', locationName: 'Overflow', zone: 'Zone C', qty: 0 },
-      ],
-    },
-    {
-      id: 'itm-008', sku: 'SKU-008', name: 'Forklift hydraulic oil 20L', description: 'ISO VG 46', unit: 'drum', reorderAt: 8, totalQty: 3,
-      stockLevels: [
-        { locationId: 'loc-a', locationName: 'Main', zone: 'Zone A', qty: 3 },
-        { locationId: 'loc-c', locationName: 'Overflow', zone: 'Zone C', qty: 0 },
-      ],
-    },
-  ]);
+  private readonly detail = signal<ItemDetail | null>(null);
 
-  readonly history = signal<Movement[]>([
-    { id: 'mv-101', type: 'IN', itemId: 'itm-001', itemSku: 'SKU-001', itemName: 'Galvanised shelf bracket', fromLocName: null, toLocName: 'Main · Zone A', qty: 80, note: 'PO-4471 delivery', userEmail: 'priya.nandi@stockroom.example', createdAt: '2026-09-05T08:14:00Z' },
-    { id: 'mv-102', type: 'TRANSFER', itemId: 'itm-001', itemSku: 'SKU-001', itemName: 'Galvanised shelf bracket', fromLocName: 'Main · Zone A', toLocName: 'Overflow · Zone C', qty: 24, note: 'Rebalancing pick face', userEmail: 'dana.whitfield@stockroom.example', createdAt: '2026-09-05T13:02:00Z' },
-    { id: 'mv-103', type: 'OUT', itemId: 'itm-001', itemSku: 'SKU-001', itemName: 'Galvanised shelf bracket', fromLocName: 'Main · Zone B', toLocName: null, qty: 16, note: 'Works order WO-882', userEmail: 'tomas.berg@stockroom.example', createdAt: '2026-09-06T09:47:00Z' },
-    { id: 'mv-104', type: 'IN', itemId: 'itm-001', itemSku: 'SKU-001', itemName: 'Galvanised shelf bracket', fromLocName: null, toLocName: 'Main · Zone B', qty: 56, note: 'PO-4488 delivery', userEmail: 'priya.nandi@stockroom.example', createdAt: '2026-09-06T15:20:00Z' },
-  ]);
+  /**
+   * The item's own history, from GET /api/items/:id/movements — already scoped
+   * to this item and readable by clerks, unlike the manager-only audit log.
+   */
+  readonly movements = signal<Movement[]>([]);
+
+  readonly loading = signal(true);
+  readonly loadError = signal<string | null>(null);
 
   private readonly params = toSignal(this.route.queryParamMap, {
     initialValue: this.route.snapshot.queryParamMap,
@@ -63,11 +60,10 @@ export class ItemDetailComponent {
 
   readonly tab = computed<Tab>(() => readOneOf(this.params().get('tab'), TABS, 'stock'));
 
-  readonly item = computed<ItemDetail>(
-    () => this.details().find((row) => row.id === this.id()) ?? this.details()[0]!,
-  );
+  /** The route param, normalised — see the note in item-form.component.ts. */
+  readonly itemId = computed(() => (this.id() ?? '').trim());
 
-  readonly movements = computed(() => this.history().filter((row) => row.itemId === this.item().id));
+  readonly item = computed<ItemDetail>(() => this.detail() ?? BLANK);
 
   readonly onHand = computed(() =>
     this.item().stockLevels.reduce((total, level) => total + level.qty, 0),
@@ -78,4 +74,43 @@ export class ItemDetailComponent {
   readonly usedLocations = computed(
     () => this.item().stockLevels.filter((level) => level.qty > 0).length,
   );
+
+  constructor() {
+    // Reloads whenever the route lands on a different item, so navigating
+    // between two items re-fetches rather than showing the previous one.
+    effect(() => {
+      void this.load(this.itemId());
+    });
+  }
+
+  /** Public so the error state's "Try again" can re-run it. */
+  reload(): Promise<void> {
+    return this.load(this.itemId());
+  }
+
+  private async load(id: string): Promise<void> {
+    if (!id) {
+      this.detail.set(null);
+      this.movements.set([]);
+      this.loading.set(false);
+      this.loadError.set('No item was selected.');
+      return;
+    }
+
+    this.loading.set(true);
+    this.loadError.set(null);
+    try {
+      // Both are needed by the page whichever tab is active, and neither
+      // depends on the other, so they go out together.
+      const [detail, history] = await Promise.all([this.api.get(id), this.api.history(id)]);
+      this.detail.set(detail);
+      this.movements.set(history);
+    } catch (err) {
+      this.detail.set(null);
+      this.movements.set([]);
+      this.loadError.set(errorMessage(err));
+    } finally {
+      this.loading.set(false);
+    }
+  }
 }

@@ -1,0 +1,9 @@
+# The builder stage copies prebaked node_modules from the base image and only then
+# runs `COPY . .`. Without this, a locally-installed node_modules would be copied
+# over the prebaked one — overwriting a known-good dep tree with the host's and
+# sending the whole directory through the build context on every build.
+node_modules
+dist
+.angular
+.env*
+*.tsbuildinfo

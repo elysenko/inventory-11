@@ -67,8 +67,14 @@ export interface SettingEntry {
   key: string;
   service: string;
   label: string;
+  /** Masked for secrets; '' when unconfigured. Never the raw secret. */
   value: string;
   configured: boolean;
+  /**
+   * Which layer supplied the effective value. An env-provisioned value wins over
+   * a saved override, so the panel can explain why an edit did not take effect.
+   */
+  source?: 'env' | 'db' | null;
 }
 
 export interface Paginated<T> {

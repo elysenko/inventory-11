@@ -16,6 +16,9 @@
       @if (formError(); as message) {
         <p class="alert alert-danger" role="alert">{{ message }}</p>
       }
+      @if (loading()) {
+        <p class="alert alert-info" role="status">Loading items, locations and current balances…</p>
+      }
 
       <fieldset class="typepick">
         <legend class="label">Movement type</legend>
@@ -109,7 +112,9 @@
       </div>
 
       <div class="form-actions">
-        <button type="submit" class="btn btn-primary">Record movement</button>
+        <button type="submit" class="btn btn-primary" [disabled]="submitting() || loading()">
+          {{ submitting() ? 'Recording…' : 'Record movement' }}
+        </button>
         <a class="btn" routerLink="/items">Cancel</a>
       </div>
     </form>
