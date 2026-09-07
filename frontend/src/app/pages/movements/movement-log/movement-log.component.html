@@ -1,0 +1,112 @@
+<div class="page">
+  <div class="page-head">
+    <div class="page-head__text">
+      <h1 class="page-title">Movement log</h1>
+      <p class="page-sub">
+        Every recorded movement, newest first. Movements are immutable — corrections are booked
+        as a new movement.
+      </p>
+    </div>
+    <div class="page-actions">
+      <a routerLink="/reports/low-stock" class="btn">Low stock report</a>
+      <a routerLink="/movements/new" class="btn btn-primary">＋ Record movement</a>
+    </div>
+  </div>
+
+  <div class="filters">
+    <div class="field">
+      <label class="label" for="f-item">Item</label>
+      <select id="f-item" class="select" [value]="itemFilter()" (change)="setFilter('itemId', $any($event.target).value)">
+        <option value="">All items</option>
+        @for (item of items(); track item.id) {
+          <option [value]="item.id">{{ item.sku }} — {{ item.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="field">
+      <label class="label" for="f-type">Type</label>
+      <select id="f-type" class="select" [value]="typeFilter()" (change)="setFilter('type', $any($event.target).value)">
+        <option value="">All types</option>
+        @for (option of typeOptions; track option) {
+          <option [value]="option">{{ option }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="field">
+      <label class="label" for="f-from">From date</label>
+      <input id="f-from" type="date" class="input" [value]="from()" (change)="setFilter('from', $any($event.target).value)" />
+    </div>
+
+    <div class="field">
+      <label class="label" for="f-to">To date</label>
+      <input id="f-to" type="date" class="input" [value]="to()" (change)="setFilter('to', $any($event.target).value)" />
+    </div>
+
+    <div class="filters__actions">
+      <button type="button" class="btn" [disabled]="!hasFilters()" (click)="clearFilters()">Clear</button>
+    </div>
+  </div>
+
+  <section class="card">
+    @if (rows().length === 0) {
+      <div class="empty">
+        <span class="empty__icon" aria-hidden="true">≡</span>
+        <p class="empty__title">No movements match these filters</p>
+        <p>Widen the date range, or clear the item and type filters.</p>
+        <button type="button" class="btn" (click)="clearFilters()">Clear filters</button>
+      </div>
+    } @else {
+      <div class="table-wrap">
+        <table class="table table--stack">
+          <thead>
+            <tr>
+              <th scope="col">When</th>
+              <th scope="col">Item</th>
+              <th scope="col">Type</th>
+              <th scope="col" class="num">Qty</th>
+              <th scope="col">From</th>
+              <th scope="col">To</th>
+              <th scope="col">Recorded by</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (movement of rows(); track movement.id) {
+              <tr>
+                <td data-label="When" class="nowrap">{{ formatDateTime(movement.createdAt) }}</td>
+                <td data-label="Item" class="cell-primary">
+                  <a [routerLink]="['/items', movement.itemId]">{{ movement.itemSku }}</a>
+                  <span class="cell-note">{{ movement.itemName }}</span>
+                </td>
+                <td data-label="Type"><span class="badge badge-{{ movement.type }}">{{ movement.type }}</span></td>
+                <td data-label="Qty" class="num">{{ movement.qty }}</td>
+                <td data-label="From">{{ movement.fromLocName ?? '—' }}</td>
+                <td data-label="To">{{ movement.toLocName ?? '—' }}</td>
+                <td data-label="Recorded by" class="small">
+                  {{ movement.userEmail }}
+                  <span class="cell-note">{{ movement.note }}</span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pager">
+        <span>{{ filtered().length }} movements match</span>
+        <div class="pager__controls">
+          <button type="button" class="btn btn-sm" [disabled]="currentPage() <= 1" (click)="goToPage(currentPage() - 1)">
+            Previous
+          </button>
+          <span class="pager__page">Page {{ currentPage() }} of {{ pageCount() }}</span>
+          <button type="button" class="btn btn-sm" [disabled]="currentPage() >= pageCount()" (click)="goToPage(currentPage() + 1)">
+            Next
+          </button>
+        </div>
+      </div>
+    }
+  </section>
+
+  <a routerLink="/movements/new" class="fab">＋ Record movement</a>
+</div>

@@ -1,0 +1,67 @@
+<div class="auth">
+  <section class="auth__panel">
+    <div class="auth__brand">
+      <span class="auth__mark" aria-hidden="true">SR</span>
+      <h1>StockRoom</h1>
+      <p class="auth__tagline">Warehouse inventory, counted once and counted right.</p>
+    </div>
+
+    <form class="form" (ngSubmit)="submit()" #loginForm="ngForm" novalidate>
+      <h2 class="auth__heading">Sign in</h2>
+
+      @if (error(); as message) {
+        <p class="alert alert-danger" role="alert">{{ message }}</p>
+      }
+
+      <div class="field">
+        <label class="label" for="email">Email address</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          class="input"
+          autocomplete="username"
+          placeholder="you@company.com"
+          [ngModel]="email()"
+          (ngModelChange)="email.set($event)"
+        />
+      </div>
+
+      <div class="field">
+        <label class="label" for="password">Password</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          class="input"
+          autocomplete="current-password"
+          placeholder="••••••••"
+          [ngModel]="password()"
+          (ngModelChange)="password.set($event)"
+        />
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" [disabled]="busy()">
+        {{ busy() ? 'Signing in…' : 'Sign in' }}
+      </button>
+
+      @if (previewShortcut; as shortcutLabel) {
+        <button type="button" class="auth__shortcut" (click)="skipLogin()">{{ shortcutLabel }}</button>
+      }
+
+      <p class="auth__alt small">
+        No account yet? <a routerLink="/signup">Create one</a>
+      </p>
+    </form>
+  </section>
+
+  <aside class="auth__aside">
+    <h2>Everything on the floor, in one ledger.</h2>
+    <ul class="auth__points">
+      <li><strong>Per-location balances</strong> — know exactly which zone holds what.</li>
+      <li><strong>Movements that never overdraw</strong> — stock in, out and between zones stays honest.</li>
+      <li><strong>A full audit trail</strong> — who moved it, how much, and when.</li>
+      <li><strong>Low-stock alerts</strong> — reorder before the shelf runs dry.</li>
+    </ul>
+  </aside>
+</div>

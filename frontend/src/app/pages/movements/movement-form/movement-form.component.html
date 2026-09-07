@@ -1,0 +1,117 @@
+<div class="page page--narrow">
+  <p class="breadcrumb"><a routerLink="/items">Items</a> <span aria-hidden="true">/</span> Record movement</p>
+
+  <div class="page-head">
+    <div class="page-head__text">
+      <h1 class="page-title">Record movement</h1>
+      <p class="page-sub">
+        Movements are permanent. Balances are applied atomically, so a movement either lands
+        completely or not at all.
+      </p>
+    </div>
+  </div>
+
+  <section class="card">
+    <form class="card-body form" (ngSubmit)="submit()" novalidate>
+      @if (formError(); as message) {
+        <p class="alert alert-danger" role="alert">{{ message }}</p>
+      }
+
+      <fieldset class="typepick">
+        <legend class="label">Movement type</legend>
+        <div class="typepick__options">
+          @for (option of typeOptions; track option) {
+            <label class="typeopt" [class.is-selected]="type() === option">
+              <input
+                type="radio"
+                name="type"
+                [value]="option"
+                [checked]="type() === option"
+                (change)="setType(option)"
+              />
+              <span class="badge badge-{{ option }}">{{ option }}</span>
+              <span class="typeopt__hint">
+                @switch (option) {
+                  @case ('IN') { Receipt into a location }
+                  @case ('OUT') { Issue out of a location }
+                  @default { Move between two locations }
+                }
+              </span>
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      <div class="form-grid">
+        <div class="field field--wide">
+          <label class="label" for="item">Item <span class="req">*</span></label>
+          <select id="item" name="item" class="select" [ngModel]="itemId()" (ngModelChange)="itemId.set($event)">
+            <option value="">Select an item…</option>
+            @for (item of items(); track item.id) {
+              <option [value]="item.id">{{ item.sku }} — {{ item.name }}</option>
+            }
+          </select>
+        </div>
+
+        @if (needsFrom()) {
+          <div class="field">
+            <label class="label" for="from">From location <span class="req">*</span></label>
+            <select id="from" name="from" class="select" [ngModel]="fromLocId()" (ngModelChange)="fromLocId.set($event)">
+              <option value="">Select a location…</option>
+              @for (location of locations(); track location.id) {
+                <option [value]="location.id">{{ locationLabel(location) }}</option>
+              }
+            </select>
+            @if (sourceBalance(); as available) {
+              <p class="hint">{{ available }} {{ selectedItem()?.unit }} currently held there.</p>
+            }
+          </div>
+        }
+
+        @if (needsTo()) {
+          <div class="field">
+            <label class="label" for="to">To location <span class="req">*</span></label>
+            <select id="to" name="to" class="select" [ngModel]="toLocId()" (ngModelChange)="toLocId.set($event)">
+              <option value="">Select a location…</option>
+              @for (location of locations(); track location.id) {
+                <option [value]="location.id">{{ locationLabel(location) }}</option>
+              }
+            </select>
+          </div>
+        }
+
+        <div class="field">
+          <label class="label" for="qty">Quantity <span class="req">*</span></label>
+          <input
+            id="qty"
+            name="qty"
+            type="number"
+            min="1"
+            step="1"
+            class="input"
+            [ngModel]="qty()"
+            (ngModelChange)="qty.set(+$event)"
+          />
+          <p class="hint">Whole {{ selectedItem()?.unit ?? 'units' }}, at least 1.</p>
+        </div>
+
+        <div class="field field--wide">
+          <label class="label" for="note">Note</label>
+          <input
+            id="note"
+            name="note"
+            class="input"
+            placeholder="Purchase order, works order or reason"
+            [ngModel]="note()"
+            (ngModelChange)="note.set($event)"
+          />
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Record movement</button>
+        <a class="btn" routerLink="/items">Cancel</a>
+      </div>
+    </form>
+  </section>
+</div>

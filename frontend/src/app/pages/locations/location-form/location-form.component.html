@@ -1,0 +1,60 @@
+<div class="page page--narrow">
+  <p class="breadcrumb">
+    <a routerLink="/locations">Locations</a> <span aria-hidden="true">/</span>
+    {{ editing() ? existing()?.zone : 'New location' }}
+  </p>
+
+  <div class="page-head">
+    <div class="page-head__text">
+      <h1 class="page-title">{{ editing() ? 'Edit location' : 'New location' }}</h1>
+      <p class="page-sub">A location is a name plus a zone, and the pair must be unique.</p>
+    </div>
+  </div>
+
+  <section class="card">
+    <form class="card-body form" (ngSubmit)="save()" novalidate>
+      <div class="form-grid">
+        <div class="field">
+          <label class="label" for="loc-name">Location name <span class="req">*</span></label>
+          <input
+            id="loc-name"
+            name="name"
+            class="input"
+            [class.is-invalid]="nameError() !== null"
+            placeholder="Main"
+            [ngModel]="name()"
+            (ngModelChange)="name.set($event)"
+          />
+          @if (nameError(); as message) {
+            <p class="field-error">{{ message }}</p>
+          }
+        </div>
+
+        <div class="field">
+          <label class="label" for="loc-zone">Zone <span class="req">*</span></label>
+          <input
+            id="loc-zone"
+            name="zone"
+            class="input"
+            [class.is-invalid]="zoneError() !== null"
+            placeholder="Zone A"
+            [ngModel]="zone()"
+            (ngModelChange)="zone.set($event)"
+          />
+          @if (zoneError(); as message) {
+            <p class="field-error">{{ message }}</p>
+          } @else {
+            <p class="hint">Shown to clerks as “{{ name() || 'Main' }} · {{ zone() || 'Zone A' }}”.</p>
+          }
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          {{ editing() ? 'Save changes' : 'Create location' }}
+        </button>
+        <a class="btn" routerLink="/locations">Cancel</a>
+      </div>
+    </form>
+  </section>
+</div>

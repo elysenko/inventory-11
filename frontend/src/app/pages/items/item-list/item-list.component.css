@@ -1,0 +1,11 @@
+.cell-note {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--color-ink-subtle);
+}
+
+.pager__page { display: inline-flex; align-items: center; padding: 0 var(--space-2); }
+
+@media (max-width: 768px) {
+  .cell-note { text-align: right; }
+}

@@ -1,0 +1,116 @@
+<div class="page page--narrow">
+  <p class="breadcrumb">
+    <a routerLink="/items">Items</a> <span aria-hidden="true">/</span>
+    {{ editing() ? existing()?.sku : 'New item' }}
+  </p>
+
+  <div class="page-head">
+    <div class="page-head__text">
+      <h1 class="page-title">{{ editing() ? 'Edit item' : 'New item' }}</h1>
+      <p class="page-sub">
+        SKUs are stored uppercase and must be unique across the whole catalogue.
+      </p>
+    </div>
+  </div>
+
+  <section class="card">
+    <form class="card-body form" (ngSubmit)="save()" novalidate>
+      @if (formError(); as message) {
+        <p class="alert alert-danger" role="alert">{{ message }}</p>
+      }
+
+      <div class="form-grid">
+        <div class="field">
+          <label class="label" for="sku">SKU <span class="req">*</span></label>
+          <input
+            id="sku"
+            name="sku"
+            class="input"
+            [class.is-invalid]="skuError() !== null"
+            placeholder="SKU-009"
+            [ngModel]="sku()"
+            (ngModelChange)="sku.set($event)"
+          />
+          @if (skuError(); as message) {
+            <p class="field-error">{{ message }}</p>
+          } @else {
+            <p class="hint">Uppercased on save.</p>
+          }
+        </div>
+
+        <div class="field">
+          <label class="label" for="unit">Unit of measure <span class="req">*</span></label>
+          <select id="unit" name="unit" class="select" [ngModel]="unit()" (ngModelChange)="unit.set($event)">
+            @for (option of units(); track option) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="field field--wide">
+          <label class="label" for="name">Item name <span class="req">*</span></label>
+          <input
+            id="name"
+            name="name"
+            class="input"
+            placeholder="Galvanised shelf bracket"
+            [ngModel]="name()"
+            (ngModelChange)="name.set($event)"
+          />
+        </div>
+
+        <div class="field field--wide">
+          <label class="label" for="description">Description</label>
+          <textarea
+            id="description"
+            name="description"
+            class="textarea"
+            placeholder="Specification, supplier reference, anything the floor needs."
+            [ngModel]="description()"
+            (ngModelChange)="description.set($event)"
+          ></textarea>
+        </div>
+
+        <div class="field">
+          <label class="label" for="reorderAt">Reorder point <span class="req">*</span></label>
+          <input
+            id="reorderAt"
+            name="reorderAt"
+            type="number"
+            min="0"
+            class="input"
+            [ngModel]="reorderAt()"
+            (ngModelChange)="reorderAt.set(+$event)"
+          />
+          <p class="hint">Flagged as low stock when the total across all zones falls to this number.</p>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">{{ editing() ? 'Save changes' : 'Create item' }}</button>
+        <a class="btn" routerLink="/items">Cancel</a>
+        @if (editing()) {
+          <button type="button" class="btn btn-danger row-end" (click)="askDelete()">Delete item</button>
+        }
+      </div>
+    </form>
+  </section>
+
+  @if (confirmingDelete()) {
+    <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-item-title">
+      <div class="modal">
+        <div class="modal__body">
+          <h2 id="delete-item-title">Delete {{ existing()?.sku }}?</h2>
+          <p class="muted">This removes the item from the catalogue. It cannot be undone.</p>
+          @if (deleteError(); as message) {
+            <p class="alert alert-danger" role="alert">{{ message }}</p>
+          }
+        </div>
+        <div class="modal__actions">
+          <button type="button" class="btn" (click)="closeDelete()">Cancel</button>
+          <button type="button" class="btn btn-danger" (click)="confirmDelete()">Delete item</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

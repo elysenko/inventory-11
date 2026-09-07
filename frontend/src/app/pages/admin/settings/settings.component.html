@@ -1,0 +1,78 @@
+<div class="page page--narrow">
+  <div class="page-head">
+    <div class="page-head__text">
+      <h1 class="page-title">Settings</h1>
+      <p class="page-sub">
+        Credentials for the services StockRoom is provisioned with. Environment variables win;
+        anything left unset falls back to the value stored here.
+      </p>
+    </div>
+    <div class="page-actions">
+      <a routerLink="/items" class="btn">Back to items</a>
+    </div>
+  </div>
+
+  @if (unconfigured().length > 0) {
+    <p class="alert alert-warn" role="status">
+      <span>
+        <strong>The following need credentials to activate:</strong>
+        @for (group of unconfigured(); track group.service; let last = $last) {
+          {{ group.title }}{{ last ? '' : ', ' }}
+        }
+      </span>
+    </p>
+  }
+
+  @for (group of groups(); track group.service) {
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>{{ group.title }}</h2>
+          <p class="page-sub">{{ group.blurb }}</p>
+        </div>
+        @if (isConfigured(group)) {
+          <span class="badge badge-ok">Configured</span>
+        } @else {
+          <span class="badge badge-low">Needs credentials</span>
+        }
+      </div>
+
+      <form class="card-body form" (ngSubmit)="save(group)" novalidate>
+        @if (savedKey() === group.service) {
+          <p class="alert alert-info" role="status">{{ group.title }} credentials saved.</p>
+        }
+
+        <div class="form-grid">
+          @for (entry of group.entries; track entry.key) {
+            <div class="field field--wide">
+              <label class="label" [attr.for]="entry.key">
+                {{ entry.label }}
+                <span class="mono subtle">{{ entry.key }}</span>
+              </label>
+              <input
+                [id]="entry.key"
+                [name]="entry.key"
+                class="input"
+                type="text"
+                [placeholder]="entry.configured ? '' : placeholder"
+                [ngModel]="draftFor(entry)"
+                (ngModelChange)="setDraft(entry.key, $event)"
+              />
+              <p class="hint">
+                @if (entry.configured) {
+                  Currently set. Values are masked once stored.
+                } @else {
+                  Not configured — the service stays inactive until this is set.
+                }
+              </p>
+            </div>
+          }
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save {{ group.title }}</button>
+        </div>
+      </form>
+    </section>
+  }
+</div>

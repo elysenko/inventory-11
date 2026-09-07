@@ -1,0 +1,18 @@
+<div class="page page--narrow">
+  <section class="card">
+    <div class="empty">
+      <span class="empty__icon" aria-hidden="true">⚿</span>
+      <p class="empty__title">That area needs a higher role</p>
+      <p>
+        You are signed in as
+        <strong>{{ auth.currentUser() ? roleLabel[auth.currentUser()!.role] : 'a guest' }}</strong>.
+        The catalogue, locations, audit log and settings each require manager or administrator
+        access. Ask an administrator to raise your role.
+      </p>
+      <div class="row">
+        <a class="btn btn-primary" routerLink="/items">Back to items</a>
+        <a class="btn" routerLink="/movements/new">Record a movement</a>
+      </div>
+    </div>
+  </section>
+</div>

@@ -1,0 +1,106 @@
+<!--
+  data-testid="app-ready" is the universal readiness landmark: it enters the DOM only
+  after Angular bootstraps this root component, so the render gate can wait on it to
+  confirm the SPA hydrated (not a blank shell / 404 / failed bundle). Keep it here.
+-->
+<div data-testid="app-ready" class="shell" [class.shell--bare]="bare()">
+  @if (chromeUser(); as user) {
+    <header class="topbar">
+      <button
+        type="button"
+        class="topbar__burger"
+        aria-label="Open navigation"
+        [attr.aria-expanded]="drawerOpen()"
+        (click)="toggleDrawer()"
+      >
+        <span class="burger-bar"></span>
+        <span class="burger-bar"></span>
+        <span class="burger-bar"></span>
+      </button>
+
+      <a routerLink="/items" class="brand" (click)="closeDrawer()">
+        <span class="brand__mark" aria-hidden="true">SR</span>
+        <span class="brand__name">StockRoom</span>
+      </a>
+
+      <div class="topbar__spacer"></div>
+
+      <a routerLink="/movements/new" class="btn btn-primary btn-sm topbar__cta">
+        <span aria-hidden="true">＋</span> Record movement
+      </a>
+
+      <div class="account">
+        <button
+          type="button"
+          class="account__trigger"
+          [attr.aria-expanded]="menuOpen()"
+          (click)="toggleMenu()"
+        >
+          <span class="avatar" aria-hidden="true">{{ initials() }}</span>
+          <span class="account__meta">
+            <span class="account__email">{{ user.email }}</span>
+            <span class="account__role">{{ roleLabel[user.role] }}</span>
+          </span>
+        </button>
+
+        @if (menuOpen()) {
+          <div class="account__menu">
+            <p class="account__menu-head">
+              <strong>{{ user.name }}</strong>
+              <span class="subtle small">{{ user.email }}</span>
+            </p>
+            @if (previewShortcuts) {
+              <label class="account__switch">
+                <span class="label">View as</span>
+                <select class="select" [value]="user.role" (change)="switchRole($any($event.target).value)">
+                  @for (role of roleOptions; track role) {
+                    <option [value]="role">{{ roleLabel[role] }}</option>
+                  }
+                </select>
+              </label>
+            }
+            <button type="button" class="btn btn-block" (click)="logout()">Sign out</button>
+          </div>
+        }
+      </div>
+    </header>
+  }
+
+  <div class="body">
+    @if (chromeUser(); as user) {
+      <nav class="sidebar" [class.is-open]="drawerOpen()" aria-label="Main">
+        <p class="sidebar__label">Warehouse</p>
+        <ul>
+          @for (item of navItems(); track item.path) {
+            <li>
+              <a
+                class="navlink"
+                [routerLink]="item.path"
+                routerLinkActive="is-active"
+                [routerLinkActiveOptions]="{ exact: item.exact }"
+                (click)="closeDrawer()"
+              >
+                <span class="navlink__icon" aria-hidden="true">{{ item.icon }}</span>
+                <span class="navlink__text">
+                  <span class="navlink__label">{{ item.label }}</span>
+                  <span class="navlink__hint">{{ item.hint }}</span>
+                </span>
+              </a>
+            </li>
+          }
+        </ul>
+        <p class="sidebar__foot small">
+          Signed in as <strong>{{ roleLabel[user.role] }}</strong>
+        </p>
+      </nav>
+
+      @if (drawerOpen()) {
+        <div class="scrim" (click)="closeDrawer()"></div>
+      }
+    }
+
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+</div>

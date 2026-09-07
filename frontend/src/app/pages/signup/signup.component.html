@@ -1,0 +1,95 @@
+<div class="auth">
+  <section class="auth__panel">
+    <div class="auth__brand">
+      <span class="auth__mark" aria-hidden="true">SR</span>
+      <h1>StockRoom</h1>
+      <p class="auth__tagline">Create your warehouse account.</p>
+    </div>
+
+    <form class="form" (ngSubmit)="submit()" novalidate>
+      <h2 class="auth__heading">Create account</h2>
+
+      @if (error(); as message) {
+        <p class="alert alert-danger" role="alert">{{ message }}</p>
+      }
+
+      <div class="field">
+        <label class="label" for="name">Full name</label>
+        <input
+          id="name"
+          name="name"
+          type="text"
+          class="input"
+          autocomplete="name"
+          placeholder="Alex Moreau"
+          [ngModel]="name()"
+          (ngModelChange)="name.set($event)"
+        />
+      </div>
+
+      <div class="field">
+        <label class="label" for="signup-email">Email address</label>
+        <input
+          id="signup-email"
+          name="email"
+          type="email"
+          class="input"
+          autocomplete="email"
+          placeholder="you@company.com"
+          [ngModel]="email()"
+          (ngModelChange)="email.set($event)"
+        />
+      </div>
+
+      <div class="field">
+        <label class="label" for="signup-password">Password</label>
+        <input
+          id="signup-password"
+          name="password"
+          type="password"
+          class="input"
+          autocomplete="new-password"
+          placeholder="At least 8 characters"
+          [ngModel]="password()"
+          (ngModelChange)="password.set($event)"
+        />
+      </div>
+
+      <div class="field">
+        <label class="label" for="signup-confirm">Confirm password</label>
+        <input
+          id="signup-confirm"
+          name="confirm"
+          type="password"
+          class="input"
+          autocomplete="new-password"
+          placeholder="Repeat your password"
+          [ngModel]="confirm()"
+          (ngModelChange)="confirm.set($event)"
+        />
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" [disabled]="busy()">
+        {{ busy() ? 'Creating account…' : 'Create account' }}
+      </button>
+
+      @if (previewShortcut; as shortcutLabel) {
+        <button type="button" class="auth__shortcut" (click)="skipLogin()">{{ shortcutLabel }}</button>
+      }
+
+      <p class="auth__alt small">
+        Already have an account? <a routerLink="/login">Sign in</a>
+      </p>
+    </form>
+  </section>
+
+  <aside class="auth__aside">
+    <h2>New accounts start as clerks.</h2>
+    <ul class="auth__points">
+      <li><strong>Clerks</strong> browse the catalogue and record stock movements.</li>
+      <li><strong>Managers</strong> also maintain items and locations, and read the audit log.</li>
+      <li><strong>Administrators</strong> manage service credentials on top of everything else.</li>
+      <li>Ask an administrator to raise your role once your account exists.</li>
+    </ul>
+  </aside>
+</div>

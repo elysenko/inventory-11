@@ -1,0 +1,20 @@
+{
+  "testids": [
+    "app-ready"
+  ],
+  "headings": [
+    "Create account",
+    "Everything on the floor, in one ledger.",
+    "Items",
+    "Locations",
+    "Low stock",
+    "Movement log",
+    "New accounts start as clerks.",
+    "Record movement",
+    "Reorder list",
+    "Settings",
+    "Sign in",
+    "StockRoom"
+  ],
+  "source_dir": "/workspace/mockups/3572a8ab-3606-5f60-8b5b-5257bdddfced"
+}

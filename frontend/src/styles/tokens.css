@@ -1,0 +1,98 @@
+/**
+ * StockRoom design tokens — the single source of truth for the visual language.
+ * Every component references these via var(--token); no raw colour literals elsewhere.
+ * Palette: cool industrial slate surfaces, deep blue for primary actions, warehouse
+ * amber for warnings/low stock, so status reads instantly on a scan-heavy screen.
+ */
+:root {
+  /* Surfaces & structure */
+  --color-bg: #f2f4f7;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f8fafc;
+  --color-surface-sunken: #eef1f5;
+  --color-border: #e0e4ea;
+  --color-border-strong: #c8cfd9;
+
+  /* Ink */
+  --color-ink: #10151c;
+  --color-ink-muted: #59636f;
+  --color-ink-subtle: #8993a1;
+  --color-ink-invert: #ffffff;
+
+  /* Brand / primary */
+  --color-primary: #1f4b8f;
+  --color-primary-hover: #17396d;
+  --color-primary-soft: #e8effa;
+  --color-primary-border: #b9cdea;
+
+  /* Warehouse accent */
+  --color-accent: #b45f06;
+  --color-accent-soft: #fdf1e0;
+  --color-accent-border: #f0cf9f;
+
+  /* Semantic */
+  --color-danger: #b42318;
+  --color-danger-soft: #fdeceb;
+  --color-danger-border: #f3c3bf;
+  --color-success: #0f6b45;
+  --color-success-soft: #e3f4ec;
+  --color-success-border: #b3ddc8;
+  --color-warn: #8a5c07;
+  --color-warn-soft: #fdf4dc;
+  --color-warn-border: #ecd69b;
+  --color-info: #1f4b8f;
+  --color-info-soft: #e8effa;
+
+  /* Movement type accents */
+  --color-move-in: #0f6b45;
+  --color-move-in-soft: #e3f4ec;
+  --color-move-out: #b42318;
+  --color-move-out-soft: #fdeceb;
+  --color-move-transfer: #1f4b8f;
+  --color-move-transfer-soft: #e8effa;
+
+  /* Shell */
+  --color-shell: #101a28;
+  --color-shell-alt: #18243550;
+  --color-shell-ink: #d7dee8;
+  --color-shell-ink-muted: #8b97a8;
+  --color-shell-border: #24334699;
+
+  /* Typography */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.9375rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-input: 1rem; /* >=16px: prevents iOS auto-zoom on focus */
+
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(16, 21, 28, 0.06);
+  --shadow-md: 0 2px 8px rgba(16, 21, 28, 0.08);
+  --shadow-lg: 0 12px 32px rgba(16, 21, 28, 0.18);
+
+  /* Layout */
+  --sidebar-width: 244px;
+  --header-height: 56px;
+  --tap-target: 44px;
+  --content-max: 1180px;
+}

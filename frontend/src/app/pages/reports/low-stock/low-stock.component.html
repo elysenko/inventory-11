@@ -1,0 +1,89 @@
+<div class="page">
+  <div class="page-head">
+    <div class="page-head__text">
+      <h1 class="page-title">Low stock</h1>
+      <p class="page-sub">
+        Items whose total across every zone has fallen to or below their reorder point.
+      </p>
+    </div>
+    <div class="page-actions">
+      <a routerLink="/movements" class="btn">Movement log</a>
+      <a routerLink="/items" [queryParams]="{ lowStock: true }" class="btn">View in catalogue</a>
+    </div>
+  </div>
+
+  @if (rows().length === 0) {
+    <section class="card">
+      <div class="empty">
+        <span class="empty__icon" aria-hidden="true">✓</span>
+        <p class="empty__title">Nothing needs reordering</p>
+        <p>Every item is above its reorder point.</p>
+        <a class="btn" routerLink="/items">Back to items</a>
+      </div>
+    </section>
+  } @else {
+    <div class="stat-grid">
+      <div class="stat">
+        <p class="stat__label">Items below threshold</p>
+        <p class="stat__value">{{ rows().length }}</p>
+        <p class="stat__hint">across the whole catalogue</p>
+      </div>
+      <div class="stat">
+        <p class="stat__label">Completely out</p>
+        <p class="stat__value">{{ criticalCount() }}</p>
+        <p class="stat__hint">zero units on hand anywhere</p>
+      </div>
+      <div class="stat">
+        <p class="stat__label">Total shortfall</p>
+        <p class="stat__value">{{ totalDeficit() }}</p>
+        <p class="stat__hint">units needed to clear every deficit</p>
+      </div>
+    </div>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Reorder list</h2>
+        <span class="subtle small">Worst deficit first</span>
+      </div>
+      <div class="table-wrap">
+        <table class="table table--stack">
+          <thead>
+            <tr>
+              <th scope="col">SKU</th>
+              <th scope="col">Item</th>
+              <th scope="col" class="num">On hand</th>
+              <th scope="col" class="num">Reorder at</th>
+              <th scope="col" class="num">Deficit</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of rows(); track row.itemId) {
+              <tr>
+                <td data-label="SKU"><a class="mono" [routerLink]="['/items', row.itemId]">{{ row.sku }}</a></td>
+                <td data-label="Item" class="cell-primary">
+                  {{ row.name }}
+                  @if (row.totalQty === 0) {
+                    <span class="badge badge-danger">Out of stock</span>
+                  }
+                </td>
+                <td data-label="On hand" class="num">{{ row.totalQty }} {{ row.unit }}</td>
+                <td data-label="Reorder at" class="num">{{ row.reorderAt }}</td>
+                <td data-label="Deficit" class="num"><strong>{{ row.deficit }}</strong></td>
+                <td data-label="">
+                  <div class="actions">
+                    <a
+                      class="btn btn-sm btn-primary"
+                      routerLink="/movements/new"
+                      [queryParams]="{ itemId: row.itemId, type: 'IN' }"
+                    >Restock</a>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </section>
+  }
+</div>

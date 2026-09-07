@@ -1,0 +1,96 @@
+<div class="page">
+  <div class="page-head">
+    <div class="page-head__text">
+      <h1 class="page-title">Locations</h1>
+      <p class="page-sub">Storage areas and zones stock can be booked into. Manager access only.</p>
+    </div>
+    <div class="page-actions">
+      <a routerLink="/items" class="btn">Items</a>
+      <a routerLink="/locations/new" class="btn btn-primary">＋ New location</a>
+    </div>
+  </div>
+
+  <section class="card">
+    @if (rows().length === 0) {
+      <div class="empty">
+        <span class="empty__icon" aria-hidden="true">⌗</span>
+        <p class="empty__title">No locations yet</p>
+        <p>Add a zone before recording any stock movements.</p>
+        <a class="btn btn-primary" routerLink="/locations/new">Create a location</a>
+      </div>
+    } @else {
+      <div class="table-wrap">
+        <table class="table table--stack">
+          <thead>
+            <tr>
+              <th scope="col">Location</th>
+              <th scope="col">Zone</th>
+              <th scope="col" class="num">Distinct items</th>
+              <th scope="col" class="num">Units held</th>
+              <th scope="col"><span class="sr-only">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (location of rows(); track location.id) {
+              <tr>
+                <td data-label="Location" class="cell-primary">{{ location.name }}</td>
+                <td data-label="Zone">{{ location.zone }}</td>
+                <td data-label="Distinct items" class="num">{{ location.itemCount }}</td>
+                <td data-label="Units held" class="num">
+                  {{ location.totalQty }}
+                  @if (location.totalQty === 0) {
+                    <span class="badge badge-neutral">Empty</span>
+                  }
+                </td>
+                <td data-label="">
+                  <div class="actions">
+                    <a class="btn btn-sm" [routerLink]="['/locations', location.id, 'edit']">Edit</a>
+                    <button type="button" class="btn btn-sm" (click)="askDelete(location)">Delete</button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pager">
+        <span>{{ locations().length }} locations</span>
+        <div class="pager__controls">
+          <button type="button" class="btn btn-sm" [disabled]="currentPage() <= 1" (click)="goToPage(currentPage() - 1)">
+            Previous
+          </button>
+          <span class="pager__page">Page {{ currentPage() }} of {{ pageCount() }}</span>
+          <button
+            type="button"
+            class="btn btn-sm"
+            [disabled]="currentPage() >= pageCount()"
+            (click)="goToPage(currentPage() + 1)"
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    }
+  </section>
+
+  <a routerLink="/locations/new" class="fab">＋ New location</a>
+
+  @if (pendingDelete(); as target) {
+    <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-loc-title">
+      <div class="modal">
+        <div class="modal__body">
+          <h2 id="delete-loc-title">Delete {{ target.name }} · {{ target.zone }}?</h2>
+          <p class="muted">Locations that still hold stock cannot be deleted.</p>
+          @if (deleteError(); as message) {
+            <p class="alert alert-danger" role="alert">{{ message }}</p>
+          }
+        </div>
+        <div class="modal__actions">
+          <button type="button" class="btn" (click)="closeDelete()">Cancel</button>
+          <button type="button" class="btn btn-danger" (click)="confirmDelete(target)">Delete location</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
