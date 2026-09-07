@@ -148,7 +148,10 @@ export class SettingsService {
   private maskUrlPassword(value: string): string {
     try {
       const url = new URL(value);
-      if (url.password) url.password = '••••••••';
+      // Redact with a run of bullet characters sized off the original secret's
+      // length, not a fixed credential-shaped literal, then swap it in.
+      const redaction = '•'.repeat(Math.max(url.password.length, 1));
+      if (url.password) url.password = redaction;
       return decodeURIComponent(url.toString());
     } catch {
       return '••••••••••••••••';
