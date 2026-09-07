@@ -7,6 +7,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Auth baseline — Colossus accounts contract. Keep verbatim.
+// ─────────────────────────────────────────────────────────────────────────────
+
 model User {
   id           String   @id @default(uuid())
   email        String   @unique
@@ -16,10 +20,13 @@ model User {
   role         Role     @default(USER)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  movements Movement[]
 }
 
-/// One value per role the stack contract declares (stacks/combos/enterprise.json auth.roles).
+/// One value per role the stack contract declares (colossus.stack.json auth.roles).
 /// Colossus mints one login per role; add app roles here AND to the contract, never demo users.
+/// StockRoom vocabulary: USER == "clerk"; MANAGER and ADMIN carry manager privileges.
 enum Role {
   USER
   MANAGER
@@ -40,4 +47,108 @@ model ColossusAccount {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@map("colossus_accounts")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// StockRoom domain
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// A catalogue entry. On-hand quantity is never stored here — it is always the
+/// sum of the item's StockLevel rows, so the per-location breakdown and the
+/// total can never disagree.
+model Item {
+  id          String   @id @default(cuid())
+  /// Stored uppercase-trimmed; duplicates surface as P2002 -> 422 on the sku field.
+  sku         String   @unique
+  name        String
+  description String?
+  unit        String
+  /// Low-stock threshold: an item is low when SUM(stockLevels.qty) <= reorderAt.
+  reorderAt   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  stockLevels StockLevel[]
+  movements   Movement[]
+
+  @@index([name])
+}
+
+/// A physical place stock can sit. Unique per (name, zone) so "Rack 1" can exist
+/// in more than one zone.
+model Location {
+  id        String   @id @default(cuid())
+  name      String
+  zone      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stockLevels    StockLevel[]
+  movementsFrom  Movement[]   @relation("MovementFromLocation")
+  movementsTo    Movement[]   @relation("MovementToLocation")
+
+  @@unique([name, zone])
+  @@index([zone])
+}
+
+/// Current balance of one item at one location. The unique pair is what makes the
+/// upsert-then-lock movement transaction safe under concurrency.
+model StockLevel {
+  id         String   @id @default(cuid())
+  itemId     String
+  locationId String
+  qty        Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  item     Item     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([itemId, locationId])
+  @@index([locationId])
+}
+
+/// Immutable audit record of a stock change. Written in the same transaction that
+/// moves the balances, so the ledger and the StockLevel rows never diverge.
+/// Restrict on every relation: an item, location or user with history cannot be
+/// deleted out from under the log (surfaces as 409).
+model Movement {
+  id        String       @id @default(cuid())
+  type      MovementType
+  itemId    String
+  /// Required for OUT and TRANSFER, forbidden for IN.
+  fromLocId String?
+  /// Required for IN and TRANSFER, forbidden for OUT.
+  toLocId   String?
+  qty       Int
+  note      String?
+  userId    String
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  item    Item      @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  fromLoc Location? @relation("MovementFromLocation", fields: [fromLocId], references: [id], onDelete: Restrict)
+  toLoc   Location? @relation("MovementToLocation", fields: [toLocId], references: [id], onDelete: Restrict)
+  user    User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([itemId, createdAt])
+  @@index([createdAt])
+  @@index([userId])
+  @@index([fromLocId])
+  @@index([toLocId])
+}
+
+enum MovementType {
+  IN
+  OUT
+  TRANSFER
+}
+
+/// Runtime override layer for service credentials. resolveConfig() reads
+/// process.env first and falls back to this table; a value equal to
+/// PLACEHOLDER_CONFIGURE_IN_SETTINGS counts as unset.
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
