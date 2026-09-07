@@ -30,7 +30,7 @@ export class AuthService {
   async login(dto: LoginDto): Promise<AuthResult> {
     // Matched case-insensitively: the DTO normalises what the user typed, but
     // prisma/seed/seed.js stores platform emails exactly as Colossus supplied
-    // them. An account minted as "Admin@demo.local" must still be able to log in.
+    // them, so a minted address with capitals must still be able to log in.
     const user = await this.prisma.user.findFirst({
       where: { email: { equals: dto.email, mode: 'insensitive' } },
     });

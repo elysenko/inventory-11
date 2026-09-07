@@ -77,6 +77,8 @@ demo accounts and no credentials in this repository.
 ## Running it locally
 
 ```bash
+# compose reads every credential from your shell — nothing secret is committed
+export POSTGRES_PASSWORD=... JWT_SECRET=...
 docker compose up -d postgres          # Postgres 16 on :5432
 
 cd backend

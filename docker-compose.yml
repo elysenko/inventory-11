@@ -1,39 +1,56 @@
-version: '3.9'
+# Local development topology for StockRoom.
+#
+# Mirrors the deployed shape: Postgres, the NestJS API on :3001, and the nginx
+# frontend on :8080 proxying /api/ to the API. Every credential is read from the
+# shell environment with a development-only fallback so nothing secret is
+# committed; the deployment reads the same variables from a Kubernetes Secret.
+#
+#   POSTGRES_PASSWORD=… JWT_SECRET=… docker compose up --build
 
 services:
   postgres:
     image: postgres:16
-    container_name: template_enterprise_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: app_development
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in your shell}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
     ports:
       - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-postgres}']
       interval: 10s
       timeout: 5s
       retries: 5
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: template_enterprise_pgadmin
+  backend:
+    build:
+      context: ./backend
     restart: unless-stopped
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: postgres
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app}
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in your shell}
+      PORT: '3001'
+      COLOSSUS_ACCOUNTS_JSON: ${COLOSSUS_ACCOUNTS_JSON:-}
+    # migrate deploy is idempotent; the seed materialises the platform-owned
+    # logins from COLOSSUS_ACCOUNTS_JSON and is a no-op when it is unset.
+    command: sh -c "npx prisma migrate deploy && node prisma/seed/seed.js; node dist/main"
     ports:
-      - '5050:80'
+      - '3001:3001'
     depends_on:
       postgres:
         condition: service_healthy
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    ports:
+      - '8080:80'
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
-  pgadmin_data:

@@ -68,10 +68,10 @@
     </div>
 
     <nav class="tabs" aria-label="Item detail sections">
-      <a class="tab" [class.is-active]="tab() === 'stock'" [queryParams]="{ tab: 'stock' }" [routerLink]="[]">
+      <a class="tab" [class.is-active]="tab() === 'stock'" [queryParams]="{ tab: 'stock' }" queryParamsHandling="merge" [routerLink]="[]">
         Stock by location
       </a>
-      <a class="tab" [class.is-active]="tab() === 'history'" [queryParams]="{ tab: 'history' }" [routerLink]="[]">
+      <a class="tab" [class.is-active]="tab() === 'history'" [queryParams]="{ tab: 'history' }" queryParamsHandling="merge" [routerLink]="[]">
         Movement history
       </a>
     </nav>

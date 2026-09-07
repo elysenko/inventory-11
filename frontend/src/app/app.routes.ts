@@ -15,16 +15,19 @@ export const routes: Routes = [
   {
     path: 'login',
     title: 'Sign in · StockRoom',
+    data: { flow: 'auth.login' },
     loadComponent: () => import('./pages/login/login.component').then((m) => m.LoginComponent),
   },
   {
     path: 'signup',
     title: 'Create account · StockRoom',
+    data: { flow: 'auth.signup' },
     loadComponent: () => import('./pages/signup/signup.component').then((m) => m.SignupComponent),
   },
   {
     path: 'items',
     title: 'Items · StockRoom',
+    data: { flow: 'items.list' },
     canActivate: [authGuard],
     loadComponent: () =>
       import('./pages/items/item-list/item-list.component').then((m) => m.ItemListComponent),
@@ -32,6 +35,7 @@ export const routes: Routes = [
   {
     path: 'items/new',
     title: 'New item · StockRoom',
+    data: { flow: 'items.create' },
     canActivate: [roleGuard(MANAGER)],
     loadComponent: () =>
       import('./pages/items/item-form/item-form.component').then((m) => m.ItemFormComponent),
@@ -39,6 +43,7 @@ export const routes: Routes = [
   {
     path: 'items/:id',
     title: 'Item · StockRoom',
+    data: { flow: 'items.detail' },
     canActivate: [authGuard],
     loadComponent: () =>
       import('./pages/items/item-detail/item-detail.component').then((m) => m.ItemDetailComponent),
@@ -46,6 +51,7 @@ export const routes: Routes = [
   {
     path: 'items/:id/edit',
     title: 'Edit item · StockRoom',
+    data: { flow: 'items.edit' },
     canActivate: [roleGuard(MANAGER)],
     loadComponent: () =>
       import('./pages/items/item-form/item-form.component').then((m) => m.ItemFormComponent),
@@ -53,6 +59,7 @@ export const routes: Routes = [
   {
     path: 'locations',
     title: 'Locations · StockRoom',
+    data: { flow: 'locations.list' },
     canActivate: [roleGuard(MANAGER)],
     loadComponent: () =>
       import('./pages/locations/location-list/location-list.component').then(
@@ -62,6 +69,7 @@ export const routes: Routes = [
   {
     path: 'locations/new',
     title: 'New location · StockRoom',
+    data: { flow: 'locations.create' },
     canActivate: [roleGuard(MANAGER)],
     loadComponent: () =>
       import('./pages/locations/location-form/location-form.component').then(
@@ -71,6 +79,7 @@ export const routes: Routes = [
   {
     path: 'locations/:id/edit',
     title: 'Edit location · StockRoom',
+    data: { flow: 'locations.edit' },
     canActivate: [roleGuard(MANAGER)],
     loadComponent: () =>
       import('./pages/locations/location-form/location-form.component').then(
@@ -80,6 +89,7 @@ export const routes: Routes = [
   {
     path: 'movements/new',
     title: 'Record movement · StockRoom',
+    data: { flow: 'movements.record' },
     canActivate: [authGuard],
     loadComponent: () =>
       import('./pages/movements/movement-form/movement-form.component').then(
@@ -89,6 +99,7 @@ export const routes: Routes = [
   {
     path: 'movements',
     title: 'Movement log · StockRoom',
+    data: { flow: 'movements.log' },
     canActivate: [roleGuard(MANAGER)],
     loadComponent: () =>
       import('./pages/movements/movement-log/movement-log.component').then(
@@ -98,6 +109,7 @@ export const routes: Routes = [
   {
     path: 'reports/low-stock',
     title: 'Low stock · StockRoom',
+    data: { flow: 'reports.lowStock' },
     canActivate: [roleGuard(MANAGER)],
     loadComponent: () =>
       import('./pages/reports/low-stock/low-stock.component').then((m) => m.LowStockComponent),
@@ -105,6 +117,7 @@ export const routes: Routes = [
   {
     path: 'admin/settings',
     title: 'Settings · StockRoom',
+    data: { flow: 'admin.settings' },
     canActivate: [roleGuard(ADMIN)],
     loadComponent: () =>
       import('./pages/admin/settings/settings.component').then((m) => m.SettingsComponent),
@@ -112,6 +125,7 @@ export const routes: Routes = [
   {
     path: '403',
     title: 'No access · StockRoom',
+    data: { flow: 'error.forbidden' },
     canActivate: [authGuard],
     loadComponent: () =>
       import('./pages/forbidden/forbidden.component').then((m) => m.ForbiddenComponent),

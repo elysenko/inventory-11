@@ -90,9 +90,22 @@ export class MovementFormComponent {
   readonly needsFrom = computed(() => this.type() === 'OUT' || this.type() === 'TRANSFER');
   readonly needsTo = computed(() => this.type() === 'IN' || this.type() === 'TRANSFER');
 
-  readonly sourceBalance = computed(() => {
+  /** On-hand at the selected source, or null when no source applies yet. */
+  readonly sourceQty = computed(() => {
     if (!this.needsFrom() || !this.itemId() || !this.fromLocId()) return null;
     return this.balances()[`${this.itemId()}|${this.fromLocId()}`] ?? 0;
+  });
+
+  /**
+   * The template renders this behind `@if (sourceBalance(); as available)`, which is a
+   * truthiness test — a numeric 0 would hide the hint in exactly the case the user most
+   * needs it (an empty source is what the backend answers with 422 "Insufficient stock").
+   * Formatting to a string here keeps "0 ea currently held there." visible without
+   * touching the approved markup.
+   */
+  readonly sourceBalance = computed(() => {
+    const qty = this.sourceQty();
+    return qty === null ? null : String(qty);
   });
 
   locationLabel(location: Location): string {
